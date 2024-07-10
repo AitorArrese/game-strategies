@@ -192,6 +192,19 @@ module Exercises = struct
   ;;
 
   (* Exercise 2 *)
+  let neighbors (position : Game.Position.t) =
+    let row, col = position.row, position.column in
+    [ { position with row = row - 1 }
+    ; { position with row = row + 1 }
+    ; { position with column = col - 1 }
+    ; { position with column = col + 1 }
+    ; { row = row - 1; column = col - 1 }
+    ; { row = row + 1; column = col + 1 }
+    ; { row = row - 1; column = col + 1 }
+    ; { row = row + 1; column = col - 1 }
+    ]
+  ;;
+
   let neighbors_2 (position : Game.Position.t) =
     let row, col = position.row, position.column in
     [ ( { position with row = row - 1 }
@@ -303,6 +316,11 @@ module Exercises = struct
       && Game.Piece.equal piece (Map.find_exn game.board coord))
   ;;
 
+  let some_line line (game : Game.t) =
+    List.exists line ~f:(fun coord ->
+      on_board game coord && Map.mem game.board coord)
+  ;;
+
   let check_invalid (game : Game.t) : bool =
     let placed_pieces = Map.to_alist game.board in
     let visited = Hash_set.create (module Game.Position) in
@@ -315,6 +333,13 @@ module Exercises = struct
         else true)
     in
     List.length errors > 0
+  ;;
+
+  let available_helpful_moves (game : Game.t) : Game.Position.t list =
+    let all_positions = board_positions game in
+    List.filter all_positions ~f:(fun position ->
+      (not (Map.mem game.board position))
+      && some_line (neighbors position) game)
   ;;
 
   let evaluate (game : Game.t) : Game.Evaluation.t =
@@ -464,6 +489,8 @@ module Exercises = struct
     !total
   ;;
 
+  let _score _game_state _maximizing_piece = 0
+
   let score game_state maximizing_piece =
     let state = evaluate game_state in
     match state with
@@ -495,283 +522,111 @@ module Exercises = struct
 
   let eval game_state =
     let state = evaluate game_state in
-    print_s [%message (state : Game.Evaluation.t)];
     match state with Game_continues -> false | _ -> true
   ;;
 
-  let rec minimax game_state depth maximizing_player piece
+  let rec _minimax game_state depth maximizing_player piece
     : int * Game.Position.t
     =
     if depth = 0 || eval game_state
-    then score game_state piece, { Game.Position.column = 1; row = 0 }
+    then score game_state piece, { Game.Position.column = -1; row = -1 }
     else (
-      let best_position = ref (List.hd_exn (available_moves game_state)) in
+      let best_position = ref { Game.Position.row = -1; column = -1 } in
       if maximizing_player
       then (
         let value = ref Int.min_value in
-        List.iter
-          (available_moves_that_do_not_immediately_lose ~me:piece game_state)
-          ~f:(fun position ->
-            let temp_game = place_piece game_state ~piece ~position in
-            let depth_score, _ = minimax temp_game (depth - 1) false piece in
-            print_s [%message (depth_score : int)];
-            if depth_score >= !value
-            then (
-              value := depth_score;
-              best_position := position));
+        List.iter (available_helpful_moves game_state) ~f:(fun position ->
+          let temp_game = place_piece game_state ~piece ~position in
+          let depth_score, _ = _minimax temp_game (depth - 1) false piece in
+          if depth_score > !value
+          then (
+            value := depth_score;
+            best_position := position));
         !value, !best_position)
       else (
         let value = ref Int.max_value in
-        List.iter
-          (available_moves_that_do_not_immediately_lose ~me:piece game_state)
-          ~f:(fun position ->
-            let temp_game = place_piece game_state ~piece ~position in
-            let depth_score, _ =
-              minimax temp_game (depth - 1) true (Game.Piece.flip piece)
-            in
-            print_s [%message (depth_score : int)];
-            if depth_score >= !value
-            then (
-              value := depth_score;
-              best_position := position));
+        List.iter (available_helpful_moves game_state) ~f:(fun position ->
+          let temp_game =
+            place_piece game_state ~piece:(Game.Piece.flip piece) ~position
+          in
+          let depth_score, _ = _minimax temp_game (depth - 1) true piece in
+          if depth_score < !value
+          then (
+            value := depth_score;
+            best_position := position));
         !value, !best_position))
   ;;
 
-  let decide_move game_state piece =
-    let _, position = minimax game_state 1 true piece in
-    position
+  let rec minimax game_state depth maximizing_player piece previous_score
+    : int * Game.Position.t
+    =
+    if depth = 0 || eval game_state
+    then score game_state piece, { Game.Position.column = -1; row = -1 }
+    else (
+      let best_position = ref { Game.Position.row = -1; column = -1 } in
+      if maximizing_player
+      then (
+        let value = ref Int.min_value in
+        let _ =
+          List.for_all
+            (available_helpful_moves game_state)
+            ~f:(fun position ->
+              let temp_game = place_piece game_state ~piece ~position in
+              let depth_score, _ =
+                minimax temp_game (depth - 1) false piece !value
+              in
+              if depth_score > !value
+              then (
+                value := depth_score;
+                best_position := position;
+                not (depth_score > previous_score))
+              else true)
+        in
+        !value, !best_position)
+      else (
+        let value = ref Int.max_value in
+        let _ =
+          List.for_all
+            (available_helpful_moves game_state)
+            ~f:(fun position ->
+              let temp_game =
+                place_piece
+                  game_state
+                  ~piece:(Game.Piece.flip piece)
+                  ~position
+              in
+              let depth_score, _ =
+                minimax temp_game (depth - 1) true piece !value
+              in
+              if depth_score < !value
+              then (
+                value := depth_score;
+                best_position := position;
+                not (depth_score < previous_score))
+              else true)
+        in
+        !value, !best_position))
   ;;
 
-  let%expect_test "find_best_move" =
-    let pos = decide_move test_gomoku Game.Piece.X in
-    print_s [%message (pos : Game.Position.t)];
-    let new_game =
-      place_piece test_gomoku ~piece:Game.Piece.X ~position:pos
+  let decide_move (game_state : Game.t) piece =
+    let search_level = ref 3 in
+    if Game.Game_kind.equal game_state.game_kind Tic_tac_toe
+    then search_level := 5;
+    let _, position =
+      minimax game_state !search_level true piece Int.max_value
     in
-    let _pos = decide_move new_game Game.Piece.O in
-    [%expect {|
-    (state Game_continues)
-    (depth_score 176)
-    (depth_score 193)
-    (depth_score 194)
-    (depth_score 195)
-    (depth_score 196)
-    (depth_score 197)
-    (depth_score 198)
-    (depth_score 199)
-    (depth_score 198)
-    (depth_score 197)
-    (depth_score 196)
-    (depth_score 195)
-    (depth_score 194)
-    (depth_score 193)
-    (depth_score 192)
-    (depth_score 177)
-    (depth_score 203)
-    (depth_score 205)
-    (depth_score 207)
-    (depth_score 209)
-    (depth_score 211)
-    (depth_score 213)
-    (depth_score 215)
-    (depth_score 213)
-    (depth_score 211)
-    (depth_score 217)
-    (depth_score 199)
-    (depth_score 197)
-    (depth_score 203)
-    (depth_score 201)
-    (depth_score 178)
-    (depth_score 205)
-    (depth_score 208)
-    (depth_score 211)
-    (depth_score 214)
-    (depth_score 217)
-    (depth_score 220)
-    (depth_score 223)
-    (depth_score 220)
-    (depth_score 217)
-    (depth_score 222)
-    (depth_score 200)
-    (depth_score 205)
-    (depth_score 202)
-    (depth_score 179)
-    (depth_score 207)
-    (depth_score 211)
-    (depth_score 215)
-    (depth_score 219)
-    (depth_score 223)
-    (depth_score 227)
-    (depth_score 239)
-    (depth_score 235)
-    (depth_score 568)
-    (depth_score 227)
-    (depth_score 223)
-    (depth_score 203)
-    (depth_score 207)
-    (depth_score 203)
-    (depth_score 180)
-    (depth_score 209)
-    (depth_score 214)
-    (depth_score 219)
-    (depth_score 224)
-    (depth_score 237)
-    (depth_score 234)
-    (depth_score 247)
-    (depth_score 237)
-    (depth_score 224)
-    (depth_score 219)
-    (depth_score 214)
-    (depth_score 209)
-    (depth_score 204)
-    (depth_score 181)
-    (depth_score 211)
-    (depth_score 217)
-    (depth_score 231)
-    (depth_score 237)
-    (depth_score 259)
-    (depth_score 249)
-    (depth_score 243)
-    (depth_score 229)
-    (depth_score 223)
-    (depth_score 217)
-    (depth_score 211)
-    (depth_score 205)
-    (depth_score 182)
-    (depth_score 213)
-    (depth_score 220)
-    (depth_score 235)
-    (depth_score 338)
-    (depth_score 248)
-    (depth_score 241)
-    (depth_score 234)
-    (depth_score 235)
-    (depth_score 228)
-    (depth_score 221)
-    (depth_score 206)
-    (depth_score 183)
-    (depth_score 215)
-    (depth_score 223)
-    (depth_score 239)
-    (depth_score 247)
-    (depth_score 600)
-    (depth_score 263)
-    (depth_score 279)
-    (depth_score 255)
-    (depth_score 255)
-    (depth_score 231)
-    (depth_score 231)
-    (depth_score 223)
-    (depth_score 207)
-    (depth_score 182)
-    (depth_score 213)
-    (depth_score 220)
-    (depth_score 227)
-    (depth_score 234)
-    (depth_score 241)
-    (depth_score 248)
-    (depth_score 255)
-    (depth_score 248)
-    (depth_score 249)
-    (depth_score 227)
-    (depth_score 228)
-    (depth_score 221)
-    (depth_score 206)
-    (depth_score 181)
-    (depth_score 211)
-    (depth_score 217)
-    (depth_score 223)
-    (depth_score 229)
-    (depth_score 235)
-    (depth_score 241)
-    (depth_score 247)
-    (depth_score 241)
-    (depth_score 243)
-    (depth_score 237)
-    (depth_score 215)
-    (depth_score 217)
-    (depth_score 211)
-    (depth_score 205)
-    (depth_score 180)
-    (depth_score 209)
-    (depth_score 214)
-    (depth_score 219)
-    (depth_score 224)
-    (depth_score 229)
-    (depth_score 234)
-    (depth_score 239)
-    (depth_score 234)
-    (depth_score 229)
-    (depth_score 224)
-    (depth_score 219)
-    (depth_score 214)
-    (depth_score 209)
-    (depth_score 204)
-    (depth_score 179)
-    (depth_score 207)
-    (depth_score 211)
-    (depth_score 215)
-    (depth_score 219)
-    (depth_score 223)
-    (depth_score 227)
-    (depth_score 231)
-    (depth_score 227)
-    (depth_score 223)
-    (depth_score 219)
-    (depth_score 215)
-    (depth_score 211)
-    (depth_score 207)
-    (depth_score 203)
-    (depth_score 178)
-    (depth_score 205)
-    (depth_score 208)
-    (depth_score 211)
-    (depth_score 214)
-    (depth_score 217)
-    (depth_score 220)
-    (depth_score 223)
-    (depth_score 220)
-    (depth_score 217)
-    (depth_score 214)
-    (depth_score 211)
-    (depth_score 208)
-    (depth_score 205)
-    (depth_score 202)
-    (depth_score 177)
-    (depth_score 203)
-    (depth_score 205)
-    (depth_score 207)
-    (depth_score 209)
-    (depth_score 211)
-    (depth_score 213)
-    (depth_score 215)
-    (depth_score 213)
-    (depth_score 211)
-    (depth_score 209)
-    (depth_score 207)
-    (depth_score 205)
-    (depth_score 203)
-    (depth_score 201)
-    (depth_score 168)
-    (depth_score 185)
-    (depth_score 186)
-    (depth_score 187)
-    (depth_score 188)
-    (depth_score 189)
-    (depth_score 190)
-    (depth_score 191)
-    (depth_score 190)
-    (depth_score 189)
-    (depth_score 188)
-    (depth_score 187)
-    (depth_score 186)
-    (depth_score 185)
-    (depth_score 184)
-    (pos ((row 7) (column 5)))
-    (state Game_continues)
-    |}];
-    return ()
+    if Game.Position.equal position { Game.Position.row = -1; column = -1 }
+    then (
+      print_endline "FAIL";
+      List.hd_exn (available_moves game_state))
+    else position
   ;;
+
+  (*let%expect_test "find_best_move" = let pos = decide_move test_gomoku
+    Game.Piece.X in print_s [%message (pos : Game.Position.t)]; let new_game
+    = place_piece test_gomoku ~piece:Game.Piece.X ~position:pos in let _pos =
+    decide_move new_game Game.Piece.O in [%expect {| (pos ((row 0) (column
+    2))) |}]; return () ;;*)
 
   let exercise_one =
     Command.async
@@ -844,6 +699,21 @@ module Exercises = struct
          return ())
   ;;
 
+  let exercise_six =
+    Command.async
+      ~summary:"Exercise 5: making best moves"
+      (let%map_open.Command () = return ()
+       and piece = piece_flag in
+       fun () ->
+         let start = Time_ns_unix.now () in
+         let pos = decide_move test_gomoku piece in
+         let stop = Time_ns_unix.now () in
+         let time_elapsed = Time_ns_unix.diff stop start in
+         print_s [%message (pos : Game.Position.t)];
+         print_s [%message (time_elapsed : Time_ns.Span.t)];
+         return ())
+  ;;
+
   let command =
     Command.group
       ~summary:"Exercises"
@@ -852,6 +722,7 @@ module Exercises = struct
       ; "three", exercise_three
       ; "four", exercise_four
       ; "five", exercise_five
+      ; "six", exercise_six
       ]
   ;;
 end

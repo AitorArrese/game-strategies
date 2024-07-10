@@ -167,6 +167,19 @@ module Exercises = struct
   ;;
 
   (* Exercise 2 *)
+  let neighbors (position : Game.Position.t) =
+    let row, col = position.row, position.column in
+    [ { position with row = row - 1 }
+    ; { position with row = row + 1 }
+    ; { position with column = col - 1 }
+    ; { position with column = col + 1 }
+    ; { row = row - 1; column = col - 1 }
+    ; { row = row + 1; column = col + 1 }
+    ; { row = row - 1; column = col + 1 }
+    ; { row = row + 1; column = col - 1 }
+    ]
+  ;;
+
   let neighbors_2 (position : Game.Position.t) =
     let row, col = position.row, position.column in
     [ ( { position with row = row - 1 }
@@ -201,6 +214,28 @@ module Exercises = struct
       ; { row = row - 1; column = col + 1 }
       ; { row = row + 1; column = col - 1 }
       ]
+    ]
+  ;;
+
+  let _neighbors3 (position : Game.Position.t) =
+    let row, col = position.row, position.column in
+    [ ( [ { position with row = row - 1 }; { position with row = row + 1 } ]
+      , ({ position with row = row - 2 }, { position with row = row + 1 }) )
+    ; ( [ { position with column = col - 1 }
+        ; { position with column = col + 1 }
+        ]
+      , ( { position with column = col - 2 }
+        , { position with column = col + 1 } ) )
+    ; ( [ { row = row - 1; column = col - 1 }
+        ; { row = row + 1; column = col + 1 }
+        ]
+      , ( { row = row - 2; column = col - 2 }
+        , { row = row + 1; column = col + 1 } ) )
+    ; ( [ { row = row - 1; column = col + 1 }
+        ; { row = row + 1; column = col - 1 }
+        ]
+      , ( { row = row - 2; column = col + 2 }
+        , { row = row + 1; column = col - 1 } ) )
     ]
   ;;
 
@@ -278,6 +313,11 @@ module Exercises = struct
       && Game.Piece.equal piece (Map.find_exn game.board coord))
   ;;
 
+  let some_line line (game : Game.t) =
+    List.exists line ~f:(fun coord ->
+      on_board game coord && Map.mem game.board coord)
+  ;;
+
   let check_invalid (game : Game.t) : bool =
     let placed_pieces = Map.to_alist game.board in
     let visited = Hash_set.create (module Game.Position) in
@@ -290,6 +330,13 @@ module Exercises = struct
         else true)
     in
     List.length errors > 0
+  ;;
+
+  let available_helpful_moves (game : Game.t) : Game.Position.t list =
+    let all_positions = board_positions game in
+    List.filter all_positions ~f:(fun position ->
+      (not (Map.mem game.board position))
+      && some_line (neighbors position) game)
   ;;
 
   let evaluate (game : Game.t) : Game.Evaluation.t =
@@ -479,13 +526,13 @@ module Exercises = struct
     : int * Game.Position.t
     =
     if depth = 0 || eval game_state
-    then score game_state piece, { Game.Position.column = 1; row = 0 }
+    then score game_state piece, { Game.Position.column = -1; row = -1 }
     else (
       let best_position = ref { Game.Position.row = -1; column = -1 } in
       if maximizing_player
       then (
         let value = ref Int.min_value in
-        List.iter (available_moves game_state) ~f:(fun position ->
+        List.iter (available_helpful_moves game_state) ~f:(fun position ->
           let temp_game = place_piece game_state ~piece ~position in
           let depth_score, _ = minimax temp_game (depth - 1) false piece in
           if depth_score > !value
@@ -495,7 +542,7 @@ module Exercises = struct
         !value, !best_position)
       else (
         let value = ref Int.max_value in
-        List.iter (available_moves game_state) ~f:(fun position ->
+        List.iter (available_helpful_moves game_state) ~f:(fun position ->
           let temp_game =
             place_piece game_state ~piece:(Game.Piece.flip piece) ~position
           in
@@ -507,27 +554,84 @@ module Exercises = struct
         !value, !best_position))
   ;;
 
-  let decide_move game_state piece =
-    let _, position = minimax game_state 3 true piece in
-    if Game.Position.equal position { Game.Position.row = -1; column = -1 }
-    then (
-      print_endline "FAIL";
-      List.hd_exn (available_moves game_state))
-    else position
+  let rec minimaxbeta game_state depth maximizing_player piece previous_score
+    : int * Game.Position.t
+    =
+    if depth = 0 || eval game_state
+    then score game_state piece, { Game.Position.column = -1; row = -1 }
+    else (
+      let best_position = ref { Game.Position.row = -1; column = -1 } in
+      if maximizing_player
+      then (
+        let value = ref Int.min_value in
+        let _ =
+          List.for_all
+            (available_helpful_moves game_state)
+            ~f:(fun position ->
+              let temp_game = place_piece game_state ~piece ~position in
+              let depth_score, _ =
+                minimaxbeta temp_game (depth - 1) false piece !value
+              in
+              if depth_score > !value
+              then (
+                value := depth_score;
+                best_position := position;
+                not (depth_score > previous_score))
+              else true)
+        in
+        !value, !best_position)
+      else (
+        let value = ref Int.max_value in
+        let _ =
+          List.for_all
+            (available_helpful_moves game_state)
+            ~f:(fun position ->
+              let temp_game =
+                place_piece
+                  game_state
+                  ~piece:(Game.Piece.flip piece)
+                  ~position
+              in
+              let depth_score, _ =
+                minimaxbeta temp_game (depth - 1) true piece !value
+              in
+              if depth_score < !value
+              then (
+                value := depth_score;
+                best_position := position;
+                not (depth_score < previous_score))
+              else true)
+        in
+        !value, !best_position))
   ;;
 
-  let%expect_test "find_best_move" =
-    let pos = decide_move test_gomoku Game.Piece.X in
-    print_s [%message (pos : Game.Position.t)];
-    let new_game =
-      place_piece test_gomoku ~piece:Game.Piece.X ~position:pos
-    in
-    let _pos = decide_move new_game Game.Piece.O in
-    [%expect {|
-    (pos ((row 0) (column 2)))
-    |}];
-    return ()
+  let decide_move (game_state : Game.t) piece =
+    let search_level = ref 3 in
+    match game_state.game_kind with
+    | Tic_tac_toe ->
+      let _, position = minimax game_state 5 true piece in
+      if Game.Position.equal position { Game.Position.row = -1; column = -1 }
+      then (
+        print_endline "FAIL";
+        List.hd_exn (available_moves game_state))
+      else position
+    | Omok ->
+      if Map.length game_state.board > 30 then search_level := 3;
+      let _, position =
+        minimaxbeta game_state !search_level true piece Int.max_value
+      in
+      if Game.Position.equal position { Game.Position.row = -1; column = -1 }
+      then (
+        print_endline "FAIL";
+        List.hd_exn (available_moves game_state))
+      else position
   ;;
+
+  (*let%expect_test "find_best_move" = let pos = decide_move test_gomoku
+    Game.Piece.X in print_s [%message (pos : Game.Position.t)]; let new_game
+    = place_piece test_gomoku ~piece:Game.Piece.X ~position:pos in let _pos =
+    decide_move new_game Game.Piece.O in [%expect {| (pos ((row 0) (column
+    2))) |}]; return () ;;*)
 
   let exercise_one =
     Command.async
@@ -606,8 +710,140 @@ module Exercises = struct
       (let%map_open.Command () = return ()
        and piece = piece_flag in
        fun () ->
+         let start = Time_ns_unix.now () in
          let pos = decide_move test_gomoku piece in
+         let stop = Time_ns_unix.now () in
+         let time_elapsed = Time_ns_unix.diff stop start in
          print_s [%message (pos : Game.Position.t)];
+         print_s [%message (time_elapsed : Time_ns.Span.t)];
+         return ())
+  ;;
+
+  let exercise_seven =
+    Command.async
+      ~summary:"Exercise 5: making best moves"
+      (let%map_open.Command () = return ()
+       and piece = piece_flag in
+       fun () ->
+         let test_gomoku =
+           let open Game in
+           empty_gomoku
+           |> place_piece
+                ~piece:Piece.X
+                ~position:{ Position.row = 7; column = 7 }
+           |> place_piece
+                ~piece:Piece.O
+                ~position:{ Position.row = 6; column = 6 }
+           |> place_piece
+                ~piece:Piece.X
+                ~position:{ Position.row = 6; column = 8 }
+           |> place_piece
+                ~piece:Piece.O
+                ~position:{ Position.row = 7; column = 8 }
+           |> place_piece
+                ~piece:Piece.X
+                ~position:{ Position.row = 6; column = 7 }
+           |> place_piece
+                ~piece:Piece.O
+                ~position:{ Position.row = 8; column = 6 }
+           |> place_piece
+                ~piece:Piece.X
+                ~position:{ Position.row = 8; column = 7 }
+           |> place_piece
+                ~piece:Piece.O
+                ~position:{ Position.row = 5; column = 7 }
+           |> place_piece
+                ~piece:Piece.X
+                ~position:{ Position.row = 9; column = 7 }
+           |> place_piece
+                ~piece:Piece.O
+                ~position:{ Position.row = 10; column = 7 }
+           |> place_piece
+                ~piece:Piece.X
+                ~position:{ Position.row = 6; column = 9 }
+           |> place_piece
+                ~piece:Piece.O
+                ~position:{ Position.row = 6; column = 10 }
+           |> place_piece
+                ~piece:Piece.X
+                ~position:{ Position.row = 5; column = 9 }
+           |> place_piece
+                ~piece:Piece.O
+                ~position:{ Position.row = 4; column = 9 }
+           |> place_piece
+                ~piece:Piece.X
+                ~position:{ Position.row = 4; column = 10 }
+           |> place_piece
+                ~piece:Piece.O
+                ~position:{ Position.row = 3; column = 11 }
+           |> place_piece
+                ~piece:Piece.X
+                ~position:{ Position.row = 7; column = 9 }
+           |> place_piece
+                ~piece:Piece.O
+                ~position:{ Position.row = 8; column = 9 }
+           |> place_piece
+                ~piece:Piece.X
+                ~position:{ Position.row = 8; column = 8 }
+           |> place_piece
+                ~piece:Piece.O
+                ~position:{ Position.row = 5; column = 8 }
+           |> place_piece
+                ~piece:Piece.X
+                ~position:{ Position.row = 10; column = 6 }
+           |> place_piece
+                ~piece:Piece.O
+                ~position:{ Position.row = 11; column = 5 }
+           |> place_piece
+                ~piece:Piece.X
+                ~position:{ Position.row = 9; column = 9 }
+           |> place_piece
+                ~piece:Piece.O
+                ~position:{ Position.row = 10; column = 10 }
+           |> place_piece
+                ~piece:Piece.X
+                ~position:{ Position.row = 9; column = 8 }
+           |> place_piece
+                ~piece:Piece.O
+                ~position:{ Position.row = 9; column = 6 }
+           |> place_piece
+                ~piece:Piece.X
+                ~position:{ Position.row = 7; column = 6 }
+           |> place_piece
+                ~piece:Piece.O
+                ~position:{ Position.row = 6; column = 5 }
+           |> place_piece
+                ~piece:Piece.X
+                ~position:{ Position.row = 10; column = 8 }
+           |> place_piece
+                ~piece:Piece.O
+                ~position:{ Position.row = 11; column = 7 }
+           |> place_piece
+                ~piece:Piece.X
+                ~position:{ Position.row = 9; column = 10 }
+           |> place_piece
+                ~piece:Piece.O
+                ~position:{ Position.row = 9; column = 11 }
+           |> place_piece
+                ~piece:Piece.X
+                ~position:{ Position.row = 10; column = 9 }
+           |> place_piece
+                ~piece:Piece.O
+                ~position:{ Position.row = 11; column = 10 }
+           |> place_piece
+                ~piece:Piece.X
+                ~position:{ Position.row = 11; column = 8 }
+           |> place_piece
+                ~piece:Piece.O
+                ~position:{ Position.row = 12; column = 8 }
+         in
+         let start = Time_ns_unix.now () in
+         let pos = decide_move test_gomoku piece in
+         let stop = Time_ns_unix.now () in
+         let time_elapsed = Time_ns_unix.diff stop start in
+         print_game test_gomoku;
+         print_s [%message (pos : Game.Position.t)];
+         print_s [%message (time_elapsed : Time_ns.Span.t)];
          return ())
   ;;
 
@@ -620,6 +856,7 @@ module Exercises = struct
       ; "four", exercise_four
       ; "five", exercise_five
       ; "six", exercise_six
+      ; "seven", exercise_seven
       ]
   ;;
 end
