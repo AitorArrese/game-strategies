@@ -51,6 +51,17 @@ module Exercises = struct
     |> place_piece ~piece:Piece.O ~position:{ Position.row = 2; column = 0 }
   ;;
 
+  let test_tic =
+    let open Game in
+    empty_game
+    |> place_piece ~piece:Piece.X ~position:{ Position.row = 0; column = 0 }
+    (*|> place_piece ~piece:Piece.O ~position:{ Position.row = 1; column = 0
+      }*)
+    |> place_piece ~piece:Piece.O ~position:{ Position.row = 0; column = 1 }
+    |> place_piece ~piece:Piece.X ~position:{ Position.row = 0; column = 2 }
+    |> place_piece ~piece:Piece.O ~position:{ Position.row = 1; column = 2 }
+  ;;
+
   let print_dashed_line len =
     match len with
     | 3 -> "---------"
@@ -207,17 +218,21 @@ module Exercises = struct
 
   let neighbors_2 (position : Game.Position.t) =
     let row, col = position.row, position.column in
-    [ ( { position with row = row - 1 }
-      , ({ position with row = row - 2 }, { position with row = row + 1 }) )
-    ; ( { position with column = col + 1 }
-      , ( { position with column = col + 2 }
-        , { position with column = col - 1 } ) )
-    ; ( { row = row - 1; column = col + 1 }
-      , ( { row = row - 2; column = col + 2 }
-        , { row = row + 1; column = col - 1 } ) )
-    ; ( { row = row + 1; column = col + 1 }
-      , ( { row = row + 2; column = col + 2 }
-        , { row = row - 1; column = col - 1 } ) )
+    [ ( [ { position with row = row - 1 } ]
+      , [ { position with row = row - 2 }; { position with row = row + 1 } ]
+      )
+    ; ( [ { position with column = col + 1 } ]
+      , [ { position with column = col + 2 }
+        ; { position with column = col - 1 }
+        ] )
+    ; ( [ { row = row - 1; column = col + 1 } ]
+      , [ { row = row - 2; column = col + 2 }
+        ; { row = row + 1; column = col - 1 }
+        ] )
+    ; ( [ { row = row + 1; column = col + 1 } ]
+      , [ { row = row + 2; column = col + 2 }
+        ; { row = row - 1; column = col - 1 }
+        ] )
     ]
   ;;
 
@@ -242,31 +257,61 @@ module Exercises = struct
     ]
   ;;
 
+  let neighbors3 (position : Game.Position.t) =
+    let row, col = position.row, position.column in
+    [ ( [ { position with row = row - 1 }; { position with row = row + 1 } ]
+      , [ { position with row = row - 2 }; { position with row = row + 1 } ]
+      )
+    ; ( [ { position with column = col - 1 }
+        ; { position with column = col + 1 }
+        ]
+      , [ { position with column = col - 2 }
+        ; { position with column = col + 1 }
+        ] )
+    ; ( [ { row = row - 1; column = col - 1 }
+        ; { row = row + 1; column = col + 1 }
+        ]
+      , [ { row = row - 2; column = col - 2 }
+        ; { row = row + 1; column = col + 1 }
+        ] )
+    ; ( [ { row = row - 1; column = col + 1 }
+        ; { row = row + 1; column = col - 1 }
+        ]
+      , [ { row = row - 2; column = col + 2 }
+        ; { row = row + 1; column = col - 1 }
+        ] )
+    ]
+  ;;
+
   let neighbors_4 (position : Game.Position.t) =
     let row, col = position.row, position.column in
     [ ( [ { position with row = row - 2 }
         ; { position with row = row - 1 }
         ; { position with row = row + 1 }
         ]
-      , ({ position with row = row - 3 }, { position with row = row + 2 }) )
+      , [ { position with row = row - 3 }; { position with row = row + 2 } ]
+      )
     ; ( [ { position with column = col - 2 }
         ; { position with column = col - 1 }
         ; { position with column = col + 1 }
         ]
-      , ( { position with column = col - 3 }
-        , { position with column = col + 2 } ) )
+      , [ { position with column = col - 3 }
+        ; { position with column = col + 2 }
+        ] )
     ; ( [ { row = row - 2; column = col - 2 }
         ; { row = row - 1; column = col - 1 }
         ; { row = row + 1; column = col + 1 }
         ]
-      , ( { row = row - 3; column = col - 3 }
-        , { row = row + 2; column = col + 2 } ) )
+      , [ { row = row - 3; column = col - 3 }
+        ; { row = row + 2; column = col + 2 }
+        ] )
     ; ( [ { row = row - 2; column = col + 2 }
         ; { row = row - 1; column = col + 1 }
         ; { row = row + 1; column = col - 1 }
         ]
-      , ( { row = row - 3; column = col + 3 }
-        , { row = row + 2; column = col - 2 } ) )
+      , [ { row = row - 3; column = col + 3 }
+        ; { row = row + 2; column = col - 2 }
+        ] )
     ]
   ;;
 
@@ -436,7 +481,7 @@ module Exercises = struct
       | false -> None)
   ;;
 
-  let centralization3 radius (positions : Game.Position.t list) : int =
+  let _centralization3 radius (positions : Game.Position.t list) : int =
     let total = ref 0 in
     List.iter positions ~f:(fun pos ->
       let r_val = Int.abs (pos.row - radius) in
@@ -454,7 +499,7 @@ module Exercises = struct
       let c_val = Int.abs (pos.column - radius) in
       total
       := !total
-         + (Int.abs (radius - r_val + 1) * Int.abs (radius - c_val + 1)));
+         + (Int.abs (radius - r_val + 1) + Int.abs (radius - c_val + 1)));
     !total
   ;;
 
@@ -465,31 +510,28 @@ module Exercises = struct
     =
     let total = ref 0 in
     let available = available_moves game @ positions in
+    let apply_blocked_value neighbor power =
+      List.iter neighbor ~f:(fun (n_pos, blocks) ->
+        if complete_line n_pos game piece
+        then (
+          let size =
+            List.length
+              (List.filter blocks ~f:(fun block ->
+                 List.mem available block ~equal:Game.Position.equal))
+          in
+          match size with
+          | 1 -> total := !total + power
+          | _ -> total := !total + (power * power)))
+    in
     List.iter positions ~f:(fun pos ->
       let neighbor2 = neighbors_2 pos in
-      let neighbor3 = neighbors_3 pos in
+      let neighbor3 = neighbors3 pos in
       let neighbor4 = neighbors_4 pos in
-      List.iter neighbor2 ~f:(fun (n2, (block1, block2)) ->
-        if Map.mem game.board n2
-           && Game.Piece.equal piece (Map.find_exn game.board n2)
-        then
-          if List.mem available block1 ~equal:Game.Position.equal
-          then total := !total + 8;
-        if List.mem available block2 ~equal:Game.Position.equal
-        then total := !total + 8);
-      List.iter neighbor3 ~f:(fun n3_pos ->
-        if complete_line n3_pos game piece then total := !total + 81);
-      List.iter neighbor4 ~f:(fun (n4_pos, (block1, block2)) ->
-        if complete_line n4_pos game piece
-        then (
-          if List.mem available block1 ~equal:Game.Position.equal
-          then total := !total + 128;
-          if List.mem available block2 ~equal:Game.Position.equal
-          then total := !total + 128)));
+      apply_blocked_value neighbor2 3;
+      apply_blocked_value neighbor3 16;
+      apply_blocked_value neighbor4 25);
     !total
   ;;
-
-  let _score _game_state _maximizing_piece = 0
 
   let score game_state maximizing_piece =
     let state = evaluate game_state in
@@ -502,14 +544,13 @@ module Exercises = struct
          else Int.min_value
        | None -> 0)
     | Game_continues ->
-      let max_pieces = all_peice_positions game_state maximizing_piece in
-      let min_pieces =
-        all_peice_positions game_state (Game.Piece.flip maximizing_piece)
-      in
       (match game_state.game_kind with
-       | Tic_tac_toe ->
-         centralization3 1 max_pieces - centralization3 1 min_pieces
+       | Tic_tac_toe -> 0
        | Omok ->
+         let max_pieces = all_peice_positions game_state maximizing_piece in
+         let min_pieces =
+           all_peice_positions game_state (Game.Piece.flip maximizing_piece)
+         in
          centralization5 7 max_pieces
          - centralization5 7 min_pieces
          + connectivity5 max_pieces game_state maximizing_piece
@@ -525,7 +566,7 @@ module Exercises = struct
     match state with Game_continues -> false | _ -> true
   ;;
 
-  let rec _minimax game_state depth maximizing_player piece
+  let rec minimax game_state depth maximizing_player piece
     : int * Game.Position.t
     =
     if depth = 0 || eval game_state
@@ -537,7 +578,7 @@ module Exercises = struct
         let value = ref Int.min_value in
         List.iter (available_helpful_moves game_state) ~f:(fun position ->
           let temp_game = place_piece game_state ~piece ~position in
-          let depth_score, _ = _minimax temp_game (depth - 1) false piece in
+          let depth_score, _ = minimax temp_game (depth - 1) false piece in
           if depth_score > !value
           then (
             value := depth_score;
@@ -549,7 +590,7 @@ module Exercises = struct
           let temp_game =
             place_piece game_state ~piece:(Game.Piece.flip piece) ~position
           in
-          let depth_score, _ = _minimax temp_game (depth - 1) true piece in
+          let depth_score, _ = minimax temp_game (depth - 1) true piece in
           if depth_score < !value
           then (
             value := depth_score;
@@ -557,7 +598,7 @@ module Exercises = struct
         !value, !best_position))
   ;;
 
-  let rec minimax game_state depth maximizing_player piece previous_score
+  let rec minimaxbeta game_state depth maximizing_player piece previous_score
     : int * Game.Position.t
     =
     if depth = 0 || eval game_state
@@ -573,7 +614,7 @@ module Exercises = struct
             ~f:(fun position ->
               let temp_game = place_piece game_state ~piece ~position in
               let depth_score, _ =
-                minimax temp_game (depth - 1) false piece !value
+                minimaxbeta temp_game (depth - 1) false piece !value
               in
               if depth_score > !value
               then (
@@ -596,7 +637,7 @@ module Exercises = struct
                   ~position
               in
               let depth_score, _ =
-                minimax temp_game (depth - 1) true piece !value
+                minimaxbeta temp_game (depth - 1) true piece !value
               in
               if depth_score < !value
               then (
@@ -610,16 +651,33 @@ module Exercises = struct
 
   let decide_move (game_state : Game.t) piece =
     let search_level = ref 3 in
-    if Game.Game_kind.equal game_state.game_kind Tic_tac_toe
-    then search_level := 5;
-    let _, position =
-      minimax game_state !search_level true piece Int.max_value
-    in
-    if Game.Position.equal position { Game.Position.row = -1; column = -1 }
-    then (
-      print_endline "FAIL";
-      List.hd_exn (available_moves game_state))
-    else position
+    match game_state.game_kind with
+    | Tic_tac_toe ->
+      let _, position = minimax game_state 5 true piece in
+      if Game.Position.equal position { Game.Position.row = -1; column = -1 }
+      then (
+        print_endline "FAIL";
+        List.hd_exn (available_moves game_state))
+      else position
+    | Omok ->
+      if Map.length game_state.board > 30 then search_level := 2;
+      let _, position =
+        minimaxbeta game_state !search_level true piece Int.max_value
+      in
+      if Game.Position.equal position { Game.Position.row = -1; column = -1 }
+      then (
+        print_endline "FAIL";
+        List.hd_exn (available_moves game_state))
+      else position
+  ;;
+
+  let%expect_test "bestmove_test_tic" =
+    let pos = decide_move test_tic Game.Piece.X in
+    print_s [%message (pos : Game.Position.t)];
+    [%expect {|
+    (pos ((row 1) (column 1)))
+    |}];
+    return ()
   ;;
 
   (*let%expect_test "find_best_move" = let pos = decide_move test_gomoku
@@ -714,6 +772,134 @@ module Exercises = struct
          return ())
   ;;
 
+  let exercise_seven =
+    Command.async
+      ~summary:"Exercise 5: making best moves"
+      (let%map_open.Command () = return ()
+       and piece = piece_flag in
+       fun () ->
+         let test_gomoku =
+           let open Game in
+           empty_gomoku
+           |> place_piece
+                ~piece:Piece.X
+                ~position:{ Position.row = 7; column = 7 }
+           |> place_piece
+                ~piece:Piece.O
+                ~position:{ Position.row = 6; column = 6 }
+           |> place_piece
+                ~piece:Piece.X
+                ~position:{ Position.row = 6; column = 8 }
+           |> place_piece
+                ~piece:Piece.O
+                ~position:{ Position.row = 7; column = 8 }
+           |> place_piece
+                ~piece:Piece.X
+                ~position:{ Position.row = 6; column = 7 }
+           |> place_piece
+                ~piece:Piece.O
+                ~position:{ Position.row = 8; column = 6 }
+           |> place_piece
+                ~piece:Piece.X
+                ~position:{ Position.row = 8; column = 7 }
+           |> place_piece
+                ~piece:Piece.O
+                ~position:{ Position.row = 5; column = 7 }
+           |> place_piece
+                ~piece:Piece.X
+                ~position:{ Position.row = 9; column = 7 }
+           |> place_piece
+                ~piece:Piece.O
+                ~position:{ Position.row = 10; column = 7 }
+           |> place_piece
+                ~piece:Piece.X
+                ~position:{ Position.row = 6; column = 9 }
+           |> place_piece
+                ~piece:Piece.O
+                ~position:{ Position.row = 6; column = 10 }
+           |> place_piece
+                ~piece:Piece.X
+                ~position:{ Position.row = 5; column = 9 }
+           |> place_piece
+                ~piece:Piece.O
+                ~position:{ Position.row = 4; column = 9 }
+           |> place_piece
+                ~piece:Piece.X
+                ~position:{ Position.row = 4; column = 10 }
+           |> place_piece
+                ~piece:Piece.O
+                ~position:{ Position.row = 3; column = 11 }
+           |> place_piece
+                ~piece:Piece.X
+                ~position:{ Position.row = 7; column = 9 }
+           |> place_piece
+                ~piece:Piece.O
+                ~position:{ Position.row = 8; column = 9 }
+           |> place_piece
+                ~piece:Piece.X
+                ~position:{ Position.row = 8; column = 8 }
+           |> place_piece
+                ~piece:Piece.O
+                ~position:{ Position.row = 5; column = 8 }
+           |> place_piece
+                ~piece:Piece.X
+                ~position:{ Position.row = 10; column = 6 }
+           |> place_piece
+                ~piece:Piece.O
+                ~position:{ Position.row = 11; column = 5 }
+           |> place_piece
+                ~piece:Piece.X
+                ~position:{ Position.row = 9; column = 9 }
+           |> place_piece
+                ~piece:Piece.O
+                ~position:{ Position.row = 10; column = 10 }
+           |> place_piece
+                ~piece:Piece.X
+                ~position:{ Position.row = 9; column = 8 }
+           |> place_piece
+                ~piece:Piece.O
+                ~position:{ Position.row = 9; column = 6 }
+           |> place_piece
+                ~piece:Piece.X
+                ~position:{ Position.row = 7; column = 6 }
+           |> place_piece
+                ~piece:Piece.O
+                ~position:{ Position.row = 6; column = 5 }
+           |> place_piece
+                ~piece:Piece.X
+                ~position:{ Position.row = 10; column = 8 }
+           |> place_piece
+                ~piece:Piece.O
+                ~position:{ Position.row = 11; column = 7 }
+           |> place_piece
+                ~piece:Piece.X
+                ~position:{ Position.row = 9; column = 10 }
+           |> place_piece
+                ~piece:Piece.O
+                ~position:{ Position.row = 9; column = 11 }
+           |> place_piece
+                ~piece:Piece.X
+                ~position:{ Position.row = 10; column = 9 }
+           |> place_piece
+                ~piece:Piece.O
+                ~position:{ Position.row = 11; column = 10 }
+           |> place_piece
+                ~piece:Piece.X
+                ~position:{ Position.row = 11; column = 8 }
+           |> place_piece
+                ~piece:Piece.O
+                ~position:{ Position.row = 12; column = 8 }
+         in
+         let start = Time_ns_unix.now () in
+         let pos = decide_move test_gomoku piece in
+         let stop = Time_ns_unix.now () in
+         let time_elapsed = Time_ns_unix.diff stop start in
+         print_game test_gomoku;
+         print_s [%message (pos : Game.Position.t)];
+         print_s [%message (time_elapsed : Time_ns.Span.t)];
+         return ())
+  ;;
+
   let command =
     Command.group
       ~summary:"Exercises"
@@ -723,6 +909,7 @@ module Exercises = struct
       ; "four", exercise_four
       ; "five", exercise_five
       ; "six", exercise_six
+      ; "seven", exercise_seven
       ]
   ;;
 end
