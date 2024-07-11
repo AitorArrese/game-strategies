@@ -47,8 +47,8 @@ module Exercises = struct
     |> place_piece ~piece:Piece.X ~position:{ Position.row = 0; column = 0 }
     (*|> place_piece ~piece:Piece.O ~position:{ Position.row = 1; column = 0
       }*)
-    |> place_piece ~piece:Piece.X ~position:{ Position.row = 2; column = 2 }
-    |> place_piece ~piece:Piece.O ~position:{ Position.row = 2; column = 0 }
+    |> place_piece ~piece:Piece.O ~position:{ Position.row = 0; column = 1 }
+    |> place_piece ~piece:Piece.O ~position:{ Position.row = 1; column = 1 }
   ;;
 
   let test_tic =
@@ -192,12 +192,12 @@ module Exercises = struct
       print_endline (Game.Position.to_string coord));
     [%expect
       {|
-      ((row 0) (column 1))
-      ((row 0) (column 2)) 
+      ((row 0) (column 2))
       ((row 1) (column 0))
-      ((row 1) (column 1))
       ((row 1) (column 2))
+      ((row 2) (column 0))
       ((row 2) (column 1))
+      ((row 2) (column 2))
       |}];
     return ()
   ;;
@@ -570,23 +570,30 @@ module Exercises = struct
     : int * Game.Position.t
     =
     if depth = 0 || eval game_state
-    then score game_state piece, { Game.Position.column = -1; row = -1 }
+    then (
+      print_s [%message (score game_state piece : int)];
+      print_s [%message (depth : int)];
+      score game_state piece, { Game.Position.column = -1; row = -1 })
     else (
       let best_position = ref { Game.Position.row = -1; column = -1 } in
       if maximizing_player
       then (
-        let value = ref Int.min_value in
-        List.iter (available_helpful_moves game_state) ~f:(fun position ->
-          let temp_game = place_piece game_state ~piece ~position in
-          let depth_score, _ = minimax temp_game (depth - 1) false piece in
-          if depth_score > !value
-          then (
-            value := depth_score;
-            best_position := position));
-        !value, !best_position)
+        let win_move = winning_moves ~me:piece game_state in
+        if List.is_empty win_move
+        then (
+          let value = ref Int.min_value in
+          List.iter (available_moves game_state) ~f:(fun position ->
+            let temp_game = place_piece game_state ~piece ~position in
+            let depth_score, _ = minimax temp_game (depth - 1) false piece in
+            if depth_score > !value
+            then (
+              value := depth_score;
+              best_position := position));
+          !value, !best_position)
+        else Int.max_value, List.hd_exn win_move)
       else (
         let value = ref Int.max_value in
-        List.iter (available_helpful_moves game_state) ~f:(fun position ->
+        List.iter (available_moves game_state) ~f:(fun position ->
           let temp_game =
             place_piece game_state ~piece:(Game.Piece.flip piece) ~position
           in
@@ -607,53 +614,63 @@ module Exercises = struct
       let best_position = ref { Game.Position.row = -1; column = -1 } in
       if maximizing_player
       then (
-        let value = ref Int.min_value in
-        let _ =
-          List.for_all
-            (available_helpful_moves game_state)
-            ~f:(fun position ->
-              let temp_game = place_piece game_state ~piece ~position in
-              let depth_score, _ =
-                minimaxbeta temp_game (depth - 1) false piece !value
-              in
-              if depth_score > !value
-              then (
-                value := depth_score;
-                best_position := position;
-                not (depth_score > previous_score))
-              else true)
-        in
-        !value, !best_position)
+        let win_move = winning_moves ~me:piece game_state in
+        if List.is_empty win_move
+        then (
+          let value = ref Int.min_value in
+          let _ =
+            List.for_all
+              (available_helpful_moves game_state)
+              ~f:(fun position ->
+                let temp_game = place_piece game_state ~piece ~position in
+                let depth_score, _ =
+                  minimaxbeta temp_game (depth - 1) false piece !value
+                in
+                if depth_score > !value
+                then (
+                  value := depth_score;
+                  best_position := position;
+                  not (depth_score > previous_score))
+                else true)
+          in
+          !value, !best_position)
+        else Int.max_value, List.hd_exn win_move)
       else (
-        let value = ref Int.max_value in
-        let _ =
-          List.for_all
-            (available_helpful_moves game_state)
-            ~f:(fun position ->
-              let temp_game =
-                place_piece
-                  game_state
-                  ~piece:(Game.Piece.flip piece)
-                  ~position
-              in
-              let depth_score, _ =
-                minimaxbeta temp_game (depth - 1) true piece !value
-              in
-              if depth_score < !value
-              then (
-                value := depth_score;
-                best_position := position;
-                not (depth_score < previous_score))
-              else true)
+        let win_move =
+          winning_moves ~me:(Game.Piece.flip piece) game_state
         in
-        !value, !best_position))
+        if List.is_empty win_move
+        then (
+          let value = ref Int.max_value in
+          let _ =
+            List.for_all
+              (available_helpful_moves game_state)
+              ~f:(fun position ->
+                let temp_game =
+                  place_piece
+                    game_state
+                    ~piece:(Game.Piece.flip piece)
+                    ~position
+                in
+                let depth_score, _ =
+                  minimaxbeta temp_game (depth - 1) true piece !value
+                in
+                if depth_score < !value
+                then (
+                  value := depth_score;
+                  best_position := position;
+                  not (depth_score < previous_score))
+                else true)
+          in
+          !value, !best_position)
+        else Int.min_value, List.hd_exn win_move))
   ;;
 
   let decide_move (game_state : Game.t) piece =
     let search_level = ref 3 in
     match game_state.game_kind with
     | Tic_tac_toe ->
-      let _, position = minimax game_state 5 true piece in
+      let _, position = minimax game_state 4 true piece in
       if Game.Position.equal position { Game.Position.row = -1; column = -1 }
       then (
         print_endline "FAIL";
@@ -675,9 +692,114 @@ module Exercises = struct
     let pos = decide_move test_tic Game.Piece.X in
     print_s [%message (pos : Game.Position.t)];
     [%expect {|
+    ("score game_state piece" 0)
+    (depth 0)
+    ("score game_state piece" 0)
+    (depth 0)
+    ("score game_state piece" 0)
+    (depth 0)
+    ("score game_state piece" 0)
+    (depth 0)
+    ("score game_state piece" 0)
+    (depth 0)
+    ("score game_state piece" 0)
+    (depth 0)
+    ("score game_state piece" 0)
+    (depth 0)
+    ("score game_state piece" 0)
+    (depth 0)
+    ("score game_state piece" -4611686018427387904)
+    (depth 0)
+    ("score game_state piece" 0)
+    (depth 0)
+    ("score game_state piece" -4611686018427387904)
+    (depth 0)
+    ("score game_state piece" 0)
+    (depth 0)
+    ("score game_state piece" 0)
+    (depth 0)
+    ("score game_state piece" 0)
+    (depth 0)
+    ("score game_state piece" -4611686018427387904)
+    (depth 0)
+    ("score game_state piece" 0)
+    (depth 0)
+    ("score game_state piece" -4611686018427387904)
+    (depth 0)
+    ("score game_state piece" 0)
+    (depth 0)
+    ("score game_state piece" 0)
+    (depth 0)
+    ("score game_state piece" 0)
+    (depth 0)
+    ("score game_state piece" 0)
+    (depth 0)
+    ("score game_state piece" 0)
+    (depth 0)
+    ("score game_state piece" 0)
+    (depth 0)
+    ("score game_state piece" 0)
+    (depth 0)
+    ("score game_state piece" 0)
+    (depth 0)
+    ("score game_state piece" 0)
+    (depth 0)
+    ("score game_state piece" 0)
+    (depth 0)
+    ("score game_state piece" 0)
+    (depth 0)
+    ("score game_state piece" 0)
+    (depth 0)
+    ("score game_state piece" 0)
+    (depth 0)
+    ("score game_state piece" 0)
+    (depth 0)
+    ("score game_state piece" -4611686018427387904)
+    (depth 0)
+    ("score game_state piece" -4611686018427387904)
+    (depth 0)
+    ("score game_state piece" -4611686018427387904)
+    (depth 0)
+    ("score game_state piece" -4611686018427387904)
+    (depth 0)
+    ("score game_state piece" 0)
+    (depth 0)
     (pos ((row 1) (column 1)))
     |}];
     return ()
+  ;;
+
+  let%expect_test "play_defense" =
+    print_game win_for_x;
+    let pos = decide_move win_for_x Game.Piece.X in
+    print_s [%message (pos : Game.Position.t)];
+    [%expect.unreachable];
+    return ()
+  [@@expect.uncaught_exn {|
+    (* CR expect_test_collector: This test expectation appears to contain a backtrace.
+       This is strongly discouraged as backtraces are fragile.
+       Please change this test to not include a backtrace. *)
+
+    (monitor.ml.Error (Failure hd)
+      ("Raised at Stdlib.failwith in file \"stdlib.ml\", line 29, characters 17-33"
+        "Called from Game_strategies_lib__Main.Exercises.(fun) in file \"lib/main.ml\", line 677, characters 14-48"
+        "Called from Async_kernel__Monitor.Exported_for_scheduler.schedule'.upon_work_fill_i in file \"src/monitor.ml\", line 293, characters 42-51"
+        "Called from Async_kernel__Job_queue.run_jobs in file \"src/job_queue.ml\", line 180, characters 6-47"
+        "Caught by monitor block_on_async"))
+    Raised at Base__Result.ok_exn in file "src/result.ml" (inlined), line 251, characters 17-26
+    Called from Async_unix__Thread_safe.block_on_async_exn in file "src/thread_safe.ml", line 168, characters 29-63
+    Called from Expect_test_collector.Make.Instance_io.exec in file "collector/expect_test_collector.ml", line 234, characters 12-19
+
+    Trailing output
+    ---------------
+    X | O | X
+    ---------
+    O | O | X
+    ---------
+    O | X | X
+    ("score game_state piece" 4611686018427387903)
+    (depth 4)
+    FAIL |}]
   ;;
 
   (*let%expect_test "find_best_move" = let pos = decide_move test_gomoku
