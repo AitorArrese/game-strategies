@@ -1,4 +1,4 @@
-# dune exec bin/game_strategies.exe -- exercises nine -piece X
+# dune exec bin/game_strategies.exe -- play -port 10000
 # OCAMLPARAM: unset
 # Shared cache: disabled
 # Shared cache location: /home/ubuntu/.cache/dune/db
@@ -13,4 +13,4 @@
 #  ; build_dir = In_build_dir "default"
 #  ; instrument_with = []
 #  }
-$ /home/ubuntu/.opam/4.14.1/bin/ocamlc.opt -config > /tmp/dune_cd4b85_output
+$ /home/ubuntu/.opam/4.14.1/bin/ocamlc.opt -config > /tmp/dune_b1da13_output

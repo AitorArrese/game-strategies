@@ -292,87 +292,279 @@ module Exercises = struct
 
   let neighbors_3_d (position : Game.Position.t) =
     let row, col = position.row, position.column in
-    [ [ { position with row = row - 1 }
-      ; { position with row = row + 1 }
-      ; { position with column = col + 1 }
-      ; { position with column = col - 1 }
-      ; { position with column = col - 2 }
-      ; { position with column = col + 2 }
-      ; { position with row = row - 2 }
-      ; { position with row = row + 2 }
-      ]
-    ; [ { position with row = row - 1 }
-      ; { position with row = row + 1 }
-      ; { row = row + 1; column = col + 1 }
-      ; { row = row + 1; column = col - 1 }
-      ; { row = row + 1; column = col + 2 }
-      ; { row = row + 1; column = col - 2 }
-      ; { position with row = row - 2 }
-      ; { position with row = row + 2 }
-      ]
-    ; [ { position with row = row - 1 }
-      ; { position with row = row + 1 }
-      ; { row = row - 1; column = col + 1 }
-      ; { row = row - 1; column = col - 1 }
-      ; { row = row - 1; column = col + 2 }
-      ; { row = row - 1; column = col - 2 }
-      ; { position with row = row - 2 }
-      ; { position with row = row + 2 }
-      ]
-    ; [ { position with row = row - 1 }
-      ; { position with row = row + 1 }
-      ; { position with column = col - 1 }
-      ; { position with column = col - 2 }
-      ; { position with column = col - 3 }
-      ; { position with column = col + 1 }
-      ; { position with row = row - 2 }
-      ; { position with row = row + 2 }
-      ]
-    ; [ { position with row = row - 1 }
-      ; { position with row = row + 1 }
-      ; { row = row + 1; column = col - 1 }
-      ; { row = row + 1; column = col - 2 }
-      ; { row = row + 1; column = col - 3 }
-      ; { row = row + 1; column = col + 1 }
-      ; { position with row = row - 2 }
-      ; { position with row = row + 2 }
-      ]
-    ; [ { position with row = row - 1 }
-      ; { position with row = row + 1 }
-      ; { row = row - 1; column = col - 1 }
-      ; { row = row - 1; column = col - 2 }
-      ; { row = row - 1; column = col - 3 }
-      ; { row = row - 1; column = col + 1 }
-      ; { position with row = row - 2 }
-      ; { position with row = row + 2 }
-      ]
-    ; [ { position with row = row - 1 }
-      ; { position with row = row + 1 }
-      ; { position with column = col + 1 }
-      ; { position with column = col + 2 }
-      ; { position with column = col + 3 }
-      ; { position with column = col - 1 }
-      ; { position with row = row - 2 }
-      ; { position with row = row + 2 }
-      ]
-    ; [ { position with row = row - 1 }
-      ; { position with row = row + 1 }
-      ; { row = row - 1; column = col + 1 }
-      ; { row = row - 1; column = col + 2 }
-      ; { row = row - 1; column = col + 3 }
-      ; { row = row - 1; column = col - 1 }
-      ; { position with row = row - 2 }
-      ; { position with row = row + 2 }
-      ]
-    ; [ { position with row = row - 1 }
-      ; { position with row = row + 1 }
-      ; { row = row + 1; column = col + 1 }
-      ; { row = row + 1; column = col + 2 }
-      ; { row = row + 1; column = col + 3 }
-      ; { row = row + 1; column = col - 1 }
-      ; { position with row = row - 2 }
-      ; { position with row = row + 2 }
-      ]
+    [ ( [ { position with row = row - 1 }
+        ; { position with row = row + 1 }
+        ; { position with column = col + 1 }
+        ; { position with column = col - 1 }
+        ]
+      , [ { position with column = col - 2 }
+        ; { position with column = col + 2 }
+        ; { position with row = row - 2 }
+        ; { position with row = row + 2 }
+        ] )
+    ; ( [ { position with row = row - 1 }
+        ; { position with row = row + 1 }
+        ; { row = row + 1; column = col + 1 }
+        ; { row = row + 1; column = col - 1 }
+        ]
+      , [ { row = row + 1; column = col + 2 }
+        ; { row = row + 1; column = col - 2 }
+        ; { position with row = row - 2 }
+        ; { position with row = row + 2 }
+        ] )
+    ; ( [ { position with row = row - 1 }
+        ; { position with row = row + 1 }
+        ; { row = row - 1; column = col + 1 }
+        ; { row = row - 1; column = col - 1 }
+        ]
+      , [ { row = row - 1; column = col + 2 }
+        ; { row = row - 1; column = col - 2 }
+        ; { position with row = row - 2 }
+        ; { position with row = row + 2 }
+        ] )
+    ; ( [ { position with row = row - 1 }
+        ; { position with row = row + 1 }
+        ; { position with column = col - 1 }
+        ; { position with column = col - 2 }
+        ]
+      , [ { position with column = col - 3 }
+        ; { position with column = col + 1 }
+        ; { position with row = row - 2 }
+        ; { position with row = row + 2 }
+        ] )
+    ; ( [ { position with row = row - 1 }
+        ; { position with row = row + 1 }
+        ; { row = row + 1; column = col - 1 }
+        ; { row = row + 1; column = col - 2 }
+        ]
+      , [ { row = row + 1; column = col - 3 }
+        ; { row = row + 1; column = col + 1 }
+        ; { position with row = row - 2 }
+        ; { position with row = row + 2 }
+        ] )
+    ; ( [ { position with row = row - 1 }
+        ; { position with row = row + 1 }
+        ; { row = row - 1; column = col - 1 }
+        ; { row = row - 1; column = col - 2 }
+        ]
+      , [ { row = row - 1; column = col - 3 }
+        ; { row = row - 1; column = col + 1 }
+        ; { position with row = row - 2 }
+        ; { position with row = row + 2 }
+        ] )
+    ; ( [ { position with row = row - 1 }
+        ; { position with row = row + 1 }
+        ; { position with column = col + 1 }
+        ; { position with column = col + 2 }
+        ]
+      , [ { position with column = col + 3 }
+        ; { position with column = col - 1 }
+        ; { position with row = row - 2 }
+        ; { position with row = row + 2 }
+        ] )
+    ; ( [ { position with row = row - 1 }
+        ; { position with row = row + 1 }
+        ; { row = row - 1; column = col + 1 }
+        ; { row = row - 1; column = col + 2 }
+        ]
+      , [ { row = row - 1; column = col + 3 }
+        ; { row = row - 1; column = col - 1 }
+        ; { position with row = row - 2 }
+        ; { position with row = row + 2 }
+        ] )
+    ; ( [ { position with row = row - 1 }
+        ; { position with row = row + 1 }
+        ; { row = row + 1; column = col + 1 }
+        ; { row = row + 1; column = col + 2 }
+        ]
+      , [ { row = row + 1; column = col + 3 }
+        ; { row = row + 1; column = col - 1 }
+        ; { position with row = row - 2 }
+        ; { position with row = row + 2 }
+        ] )
+      (* Straight 3x3s*)
+    ; ( [ { position with row = row - 1 }
+        ; { position with row = row + 1 }
+        ; { position with column = col - 1 }
+        ; { row = row - 2; column = col + 1 }
+        ]
+      , [ { row = row - 3; column = col + 2 }
+        ; { row = row + 1; column = col - 2 }
+        ; { position with row = row - 2 }
+        ; { position with row = row + 2 }
+        ] )
+    ; ( [ { position with row = row - 1 }
+        ; { position with row = row + 1 }
+        ; { position with column = col + 1 }
+        ; { row = row + 2; column = col - 1 }
+        ]
+      , [ { row = row + 3; column = col - 2 }
+        ; { row = row - 1; column = col + 2 }
+        ; { position with row = row - 2 }
+        ; { position with row = row + 2 }
+        ] )
+    ; ( [ { position with row = row - 1 }
+        ; { position with row = row + 1 }
+        ; { row = row - 1; column = col + 1 }
+        ; { row = row + 1; column = col - 1 }
+        ]
+      , [ { row = row - 2; column = col + 2 }
+        ; { row = row + 2; column = col - 2 }
+        ; { position with row = row - 2 }
+        ; { position with row = row + 2 }
+        ] )
+    ; ( [ { position with row = row - 1 }
+        ; { position with row = row + 1 }
+        ; { row = row - 2; column = col + 1 }
+        ; { row = row - 3; column = col + 2 }
+        ]
+      , [ { row = row - 4; column = col + 3 }
+        ; { position with column = col - 1 }
+        ; { position with row = row - 2 }
+        ; { position with row = row + 2 }
+        ] )
+    ; ( [ { position with row = row - 1 }
+        ; { position with row = row + 1 }
+        ; { position with column = col + 1 }
+        ; { row = row - 1; column = col + 2 }
+        ]
+      , [ { row = row - 2; column = col + 3 }
+        ; { row = row + 2; column = col - 1 }
+        ; { position with row = row - 2 }
+        ; { position with row = row + 2 }
+        ] )
+    ; ( [ { position with row = row - 1 }
+        ; { position with row = row + 1 }
+        ; { row = row - 1; column = col + 1 }
+        ; { row = row - 2; column = col + 2 }
+        ]
+      , [ { row = row - 2; column = col + 3 }
+        ; { row = row + 2; column = col - 1 }
+        ; { position with row = row - 2 }
+        ; { position with row = row + 2 }
+        ] )
+    ; ( [ { position with row = row - 1 }
+        ; { position with row = row + 1 }
+        ; { position with column = col - 1 }
+        ; { row = row + 1; column = col - 2 }
+        ]
+      , [ { row = row + 2; column = col - 3 }
+        ; { row = row - 1; column = col + 1 }
+        ; { position with row = row - 2 }
+        ; { position with row = row + 2 }
+        ] )
+    ; ( [ { position with row = row - 1 }
+        ; { position with row = row + 1 }
+        ; { row = row + 2; column = col - 2 }
+        ; { row = row + 1; column = col - 1 }
+        ]
+      , [ { row = row + 3; column = col - 3 }
+        ; { row = row - 1; column = col + 1 }
+        ; { position with row = row - 2 }
+        ; { position with row = row + 2 }
+        ] )
+    ; ( [ { position with row = row - 1 }
+        ; { position with row = row + 1 }
+        ; { row = row + 2; column = col - 1 }
+        ; { row = row + 3; column = col - 2 }
+        ]
+      , [ { row = row + 4; column = col - 3 }
+        ; { position with column = col + 1 }
+        ; { position with row = row - 2 }
+        ; { position with row = row + 2 }
+        ] )
+      (*StraightxDiagonal*)
+    ; ( [ { position with row = row - 1 }
+        ; { position with row = row + 1 }
+        ; { row = row - 1; column = col - 1 }
+        ; { row = row + 1; column = col + 1 }
+        ]
+      , [ { row = row - 2; column = col - 2 }
+        ; { row = row + 2; column = col + 2 }
+        ; { position with row = row - 2 }
+        ; { position with row = row + 2 }
+        ] )
+    ; ( [ { position with row = row - 1 }
+        ; { position with row = row + 1 }
+        ; { row = row - 1; column = col + 1 }
+        ; { row = row + 1; column = col - 1 }
+        ]
+      , [ { Game.Position.row = row - 2; column = col + 2 }
+        ; { row = row + 2; column = col - 2 }
+        ; { position with row = row - 2 }
+        ; { position with row = row + 2 }
+        ] )
+    ; ( [ { position with row = row - 1 }
+        ; { position with row = row + 1 }
+        ; { position with column = col + 1 }
+        ; { row = row - 2; column = col - 1 }
+        ]
+      , [ { row = row - 3; column = col - 2 }
+        ; { row = row + 1; column = col + 2 }
+        ; { position with row = row - 2 }
+        ; { position with row = row + 2 }
+        ] )
+    ; ( [ { position with row = row - 1 }
+        ; { position with row = row + 1 }
+        ; { position with column = col - 1 }
+        ; { row = row + 2; column = col + 1 }
+        ]
+      , [ { row = row + 3; column = col + 2 }
+        ; { row = row - 1; column = col - 2 }
+        ; { position with row = row - 2 }
+        ; { position with row = row + 2 }
+        ] )
+    ; ( [ { position with row = row - 1 }
+        ; { position with row = row + 1 }
+        ; { row = row - 2; column = col - 1 }
+        ; { row = row - 3; column = col - 2 }
+        ]
+      , [ { row = row - 4; column = col - 3 }
+        ; { position with column = col + 1 }
+        ; { position with row = row - 2 }
+        ; { position with row = row + 2 }
+        ] )
+    ; ( [ { position with row = row - 1 }
+        ; { position with row = row + 1 }
+        ; { position with column = col - 1 }
+        ; { row = row - 1; column = col - 2 }
+        ]
+      , [ { row = row - 2; column = col - 3 }
+        ; { row = row + 2; column = col + 1 }
+        ; { position with row = row - 2 }
+        ; { position with row = row + 2 }
+        ] )
+    ; ( [ { position with row = row - 1 }
+        ; { position with row = row + 1 }
+        ; { position with column = col + 1 }
+        ; { row = row + 1; column = col + 2 }
+        ]
+      , [ { row = row + 2; column = col + 3 }
+        ; { row = row - 2; column = col - 1 }
+        ; { position with row = row - 2 }
+        ; { position with row = row + 2 }
+        ] )
+    ; ( [ { position with row = row - 1 }
+        ; { position with row = row + 1 }
+        ; { row = row + 2; column = col + 2 }
+        ; { row = row + 1; column = col + 1 }
+        ]
+      , [ { row = row + 3; column = col + 3 }
+        ; { row = row - 1; column = col - 1 }
+        ; { position with row = row - 2 }
+        ; { position with row = row + 2 }
+        ] )
+    ; ( [ { position with row = row - 1 }
+        ; { position with row = row + 1 }
+        ; { row = row + 2; column = col + 1 }
+        ; { row = row + 3; column = col + 2 }
+        ]
+      , [ { row = row + 4; column = col + 3 }
+        ; { position with column = col - 1 }
+        ; { position with row = row - 2 }
+        ; { position with row = row + 2 }
+        ] )
+      (*DiagonalxStraight*)
     ]
   ;;
 
@@ -420,6 +612,12 @@ module Exercises = struct
       on_board game coord
       && Map.mem game.board coord
       && Game.Piece.equal piece (Map.find_exn game.board coord))
+  ;;
+
+  let open_line line (game : Game.t) piece =
+    List.for_all line ~f:(fun coord ->
+      (not (Map.mem game.board coord))
+      || Game.Piece.equal piece (Map.find_exn game.board coord))
   ;;
 
   let some_line line (game : Game.t) =
@@ -549,7 +747,7 @@ module Exercises = struct
     =
     let total = ref 0 in
     let available = available_moves game @ positions in
-    let apply_blocked_value neighbor power =
+    let apply_blocked_value neighbor power1 power2 =
       List.iter neighbor ~f:(fun (n_pos, blocks) ->
         if complete_line n_pos game piece
         then (
@@ -560,19 +758,57 @@ module Exercises = struct
           in
           match size with
           | 0 -> ()
-          | 1 -> total := !total + power
-          | _ -> total := !total + (power * power)))
+          | 1 -> total := !total + power1
+          | _ -> total := !total + power2))
     in
     List.iter positions ~f:(fun pos ->
       let neighbor2 = neighbors_2 pos in
       let neighbor3 = neighbors3 pos in
       let neighbor4 = neighbors_4 pos in
       let neighbor3d = neighbors_3_d pos in
-      apply_blocked_value neighbor2 2;
-      apply_blocked_value neighbor3 5;
-      apply_blocked_value neighbor4 25;
-      List.iter neighbor3d ~f:(fun line ->
-        if complete_line line game piece then total := !total + (25 * 25)));
+      apply_blocked_value neighbor2 1 4;
+      apply_blocked_value neighbor3 5 50;
+      apply_blocked_value neighbor4 101 700;
+      List.iter neighbor3d ~f:(fun (line, space) ->
+        if complete_line line game piece && open_line space game piece
+        then total := !total + 400));
+    !total
+  ;;
+
+  let connectivity5d
+    (positions : Game.Position.t list)
+    (game : Game.t)
+    (piece : Game.Piece.t)
+    =
+    let total = ref 0 in
+    let available = available_moves game @ positions in
+    let apply_blocked_value neighbor power1 power2 =
+      List.iter neighbor ~f:(fun (n_pos, blocks) ->
+        if complete_line n_pos game piece
+        then (
+          let size =
+            List.length
+              (List.filter blocks ~f:(fun block ->
+                 List.mem available block ~equal:Game.Position.equal))
+          in
+          match size with
+          | 0 -> ()
+          | 1 -> total := !total + power1
+          | _ -> total := !total + power2))
+    in
+    List.iter positions ~f:(fun pos ->
+      let neighbor2 = neighbors_2 pos in
+      let neighbor3 = neighbors3 pos in
+      let neighbor4 = neighbors_4 pos in
+      let neighbor3d = neighbors_3_d pos in
+      apply_blocked_value neighbor2 1 4;
+      apply_blocked_value neighbor3 5 90;
+      if !total > 179
+      then
+        List.iter neighbor3d ~f:(fun (line, space) ->
+          if complete_line line game piece && open_line space game piece
+          then total := !total + 350);
+      apply_blocked_value neighbor4 200 1000);
     !total
   ;;
 
@@ -595,7 +831,7 @@ module Exercises = struct
            all_peice_positions game_state (Game.Piece.flip maximizing_piece)
          in
          connectivity5 max_pieces game_state maximizing_piece
-         - connectivity5
+         - connectivity5d
              min_pieces
              game_state
              (Game.Piece.flip maximizing_piece))
@@ -721,7 +957,7 @@ module Exercises = struct
 
   let offense_or_defense (game_state : Game.t) piece =
     let len = Map.length game_state.board in
-    if score game_state piece < 0 || len % 2 = 1 || len > 32 then 2 else 3
+    if score game_state piece < 0 || len % 2 = 1 || len > 8 then 2 else 3
   ;;
 
   let decide_move (game_state : Game.t) piece =
